@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Users, Calendar, CircleDollarSign, GraduationCap, Plus } from "lucide-react";
 import Link from "next/link";
-
+import { Tables } from '@/types/database.types';
+ 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
 
   // Cálculos rápidos
   const totalStudents = students?.length ?? 0;
-  const activeStudents = students?.filter((s) => s.active).length ?? 0;
+  const activeStudents = students?.filter((s: Tables<"students">) => s.active).length ?? 0;
 
   async function getActivePackagesCount() {
     const { count } = await supabase
@@ -76,7 +77,7 @@ export default async function DashboardPage() {
     }
 
     // O TypeScript infere 'packageItem.price' automaticamente do seu schema
-    const total = data.reduce((acc, packageItem) => acc + (packageItem.price ?? 0), 0);
+    const total = data.reduce((acc, packageItem: Tables<"lesson_packages">) => acc + (packageItem.price ?? 0), 0);
 
     return total;
   }
@@ -161,7 +162,7 @@ export default async function DashboardPage() {
         {students && students.length > 0 ? (
           <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
             <ul className="divide-y divide-border/40">
-              {students.map((student) => (
+              {students.map((student: Tables<"students">) => (
                 <li key={student.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                   <div className="flex flex-col">
                     <span className="font-semibold text-primary">{student.name}</span>

@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { Tables } from "@/types/database.types";
 
 export default async function StudentsPage() {
   const supabase = await createClient();
@@ -62,7 +63,7 @@ export default async function StudentsPage() {
 
         {students && students.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-            {students.map((student) => (
+            {students.map((student: Tables<"students">) => (
               <StudentCard key={student.id} student={student} />
             ))}
           </div>
