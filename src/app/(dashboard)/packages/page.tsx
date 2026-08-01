@@ -9,6 +9,13 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { Tables } from "@/types/database.types";
+
+type packegeWithStudent = Tables<"lesson_packages"> & {
+  students?: {
+    name: string;
+  };
+};
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -34,17 +41,19 @@ export default async function PackagesPage() {
     .order("name");
 
   // 2. Consulta de Pacotes com Join de Alunos
-  const { data: packages } = await supabase
+  const { data: rawPackages } = await supabase
     .from("lesson_packages")
     .select("*, students(name)")
     .order("paid_at", { ascending: false });
 
+    const packages = rawPackages as packegeWithStudent[] | null;
+
   // 3. Consulta de Aulas Concluídas
-  const { data: completedLessons } = await supabase
+  const { data: completedLessons } = (await supabase
     .from("lessons")
     .select("package_id")
     .eq("status", "COMPLETED")
-    .eq("professor_id", user.id);
+    .eq("professor_id", user.id)) as { data: Tables<"lessons">[] | null };
 
   const completedByPackage = new Map<string, number>();
   for (const lesson of completedLessons ?? []) {

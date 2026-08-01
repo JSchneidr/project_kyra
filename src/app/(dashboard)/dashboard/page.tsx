@@ -16,17 +16,17 @@ export default async function DashboardPage() {
   }
 
   // 1. Consulta de Perfil
-  const { data: profile } = await supabase
+  const { data: profile } = (await supabase
     .from("users")
     .select("name, timezone")
     .eq("id", user.id)
-    .single();
+    .single()) as { data: Tables<"users"> | null };
 
   // 2. Consulta de Estudantes
-  const { data: students } = await supabase
+  const { data: students } = (await supabase
     .from("students")
     .select("id, name, email, active")
-    .order("name");
+    .order("name")) as { data: Tables<"students">[] | null };
 
   // Cálculos rápidos
   const totalStudents = students?.length ?? 0;
