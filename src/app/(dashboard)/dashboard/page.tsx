@@ -27,7 +27,7 @@ export default async function DashboardPage() {
 
   // Cálculos rápidos baseados nos dados reais vindos do Supabase
   const totalStudents = students?.length ?? 0;
-  const activeStudents = students?.filter(s => s.active).length ?? 0;
+  const activeStudents = students?.filter((s: { active: boolean }) => s.active).length ?? 0;
 
   async function getActivePackagesCount() {
     const { count } = await supabase
