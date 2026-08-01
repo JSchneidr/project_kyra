@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "supabase:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID --schema public > src/types/database.types.ts"
+    "supabase:types": "supabase gen types typescript --project-id rsbaliqkzmywluplanoo --schema public > src/types/database.types.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
