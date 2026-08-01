@@ -10,28 +10,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 
-// Tipos explícitos para garantir que o TypeScript não infira 'never'
-type StudentOption = {
-  id: string;
-  name: string;
-};
-
-type PackageItem = {
-  id: string;
-  student_id: string;
-  package_size: number;
-  price: number;
-  paid_at: string | null;
-  status: string;
-  students: {
-    name: string;
-  } | null;
-};
-
-type CompletedLesson = {
-  package_id: string | null;
-};
-
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -48,25 +26,25 @@ export default async function PackagesPage() {
     redirect("/login");
   }
 
-  // 1. Consulta de Alunos com Tipagem Forçada
-  const { data: students } = (await supabase
+  // 1. Consulta de Alunos
+  const { data: students } = await supabase
     .from("students")
     .select("id, name")
     .eq("active", true)
-    .order("name")) as { data: StudentOption[] | null };
+    .order("name");
 
-  // 2. Consulta de Pacotes com Tipagem Forçada
-  const { data: packages } = (await supabase
+  // 2. Consulta de Pacotes com Join de Alunos
+  const { data: packages } = await supabase
     .from("lesson_packages")
     .select("*, students(name)")
-    .order("paid_at", { ascending: false })) as { data: PackageItem[] | null };
+    .order("paid_at", { ascending: false });
 
-  // 3. Consulta de Aulas Concluídas com Tipagem Forçada (Resolve o erro do package_id)
-  const { data: completedLessons } = (await supabase
+  // 3. Consulta de Aulas Concluídas
+  const { data: completedLessons } = await supabase
     .from("lessons")
     .select("package_id")
     .eq("status", "COMPLETED")
-    .eq("professor_id", user.id)) as { data: CompletedLesson[] | null };
+    .eq("professor_id", user.id);
 
   const completedByPackage = new Map<string, number>();
   for (const lesson of completedLessons ?? []) {
@@ -116,7 +94,7 @@ export default async function PackagesPage() {
               const percentage = Math.min((done / size) * 100, 100);
               const isActive = pkg.status === "ACTIVE";
 
-              // Acesso seguro e tipado ao nome do aluno
+              // Acesso direto e tipado automaticamente pelo Database
               const studentName = pkg.students?.name ?? "Aluno removido";
 
               return (

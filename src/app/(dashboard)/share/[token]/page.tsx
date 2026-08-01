@@ -11,7 +11,6 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
 } from "@/components/ui/card";
 
@@ -20,9 +19,6 @@ const usdFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-// Rota pública — NÃO tem sessão de professor. O acesso é validado
-// manualmente pelo share_token, usando a secret key (que bypassa RLS).
-// Nunca reaproveite este client fora de rotas públicas como esta.
 export default async function PublicSharePage({
   params,
 }: {
@@ -31,6 +27,7 @@ export default async function PublicSharePage({
   const { token } = await params;
   const supabase = createServiceClient();
 
+  // 1. Busca do Aluno
   const { data: student, error } = await supabase
     .from("students")
     .select("id, name, active")
@@ -41,6 +38,7 @@ export default async function PublicSharePage({
     notFound();
   }
 
+  // 2. Busca do Pacote Ativo
   const { data: activePackage } = await supabase
     .from("lesson_packages")
     .select("id, package_size, price, paid_at, status")
@@ -48,12 +46,14 @@ export default async function PublicSharePage({
     .eq("status", "ACTIVE")
     .maybeSingle();
 
+  // 3. Contagem de Aulas Concluídas
   const { count: completedCount } = await supabase
     .from("lessons")
     .select("id", { count: "exact", head: true })
     .eq("package_id", activePackage?.id ?? "")
     .eq("status", "COMPLETED");
 
+  // 4. Busca de Aulas Agendadas
   const { data: scheduledLessons } = await supabase
     .from("lessons")
     .select("id, title, notes, start_at, end_at, status")
@@ -61,11 +61,17 @@ export default async function PublicSharePage({
     .eq("status", "SCHEDULED")
     .order("start_at");
 
+  // 5. Busca do Histórico de Reagendamentos
   const { data: reschedules } = await supabase
     .from("lesson_reschedules")
     .select("id, old_start_at, new_start_at, reason, changed_at, lessons!inner(title, notes, student_id)")
     .eq("lessons.student_id", student.id)
     .order("changed_at", { ascending: false });
+
+  // Cálculos de segurança para a barra de progresso
+  const totalPackageLessons = activePackage?.package_size || 1;
+  const totalCompleted = completedCount ?? 0;
+  const progressPercentage = Math.min((totalCompleted / totalPackageLessons) * 100, 100);
 
   return (
     <main className="mx-auto w-full px-4 py-10 space-y-8 max-w-4xl">
@@ -104,7 +110,11 @@ export default async function PublicSharePage({
                   Payment Date
                 </span>
                 <span className="font-semibold text-primary">
-                  <LocalDate iso={activePackage.paid_at} />
+                  {activePackage.paid_at ? (
+                    <LocalDate iso={activePackage.paid_at} />
+                  ) : (
+                    "Pending"
+                  )}
                 </span>
               </div>
 
@@ -114,17 +124,14 @@ export default async function PublicSharePage({
                     Package Progress
                   </span>
                   <span className="font-bold text-primary">
-                    {completedCount ?? 0} / {activePackage.package_size} lessons
+                    {totalCompleted} / {activePackage.package_size} lessons
                   </span>
                 </div>
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-secondary rounded-full transition-all duration-500"
                     style={{
-                      width: `${Math.min(
-                        ((completedCount ?? 0) / activePackage.package_size) * 100,
-                        100
-                      )}%`,
+                      width: `${progressPercentage}%`,
                     }}
                   />
                 </div>
@@ -179,10 +186,8 @@ export default async function PublicSharePage({
         {reschedules && reschedules.length > 0 ? (
           <ul className="space-y-2">
             {reschedules.map((r) => {
-              const lessonInfo = r.lessons as unknown as {
-                title: string | null;
-                notes: string | null;
-              } | null;
+              // O Supabase entende a junção 'lessons' nativamente
+              const lessonInfo = r.lessons;
 
               return (
                 <li

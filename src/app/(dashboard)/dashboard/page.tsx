@@ -3,23 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Users, Calendar, CircleDollarSign, GraduationCap, Plus } from "lucide-react";
 import Link from "next/link";
 
-// Definição de tipos explícitos para evitar erros de compilação 'never'
-type Student = {
-  id: string;
-  name: string;
-  email: string;
-  active: boolean;
-};
-
-type PackagePrice = {
-  price: number;
-};
-
-type UserProfile = {
-  name: string | null;
-  timezone: string | null;
-};
-
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -31,18 +14,18 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Garantindo o tipo da consulta de perfil
-  const { data: profile } = (await supabase
+  // 1. Consulta de Perfil
+  const { data: profile } = await supabase
     .from("users")
     .select("name, timezone")
     .eq("id", user.id)
-    .single()) as { data: UserProfile | null };
+    .single();
 
-  // Garantindo o tipo da lista de estudantes
-  const { data: students } = (await supabase
+  // 2. Consulta de Estudantes
+  const { data: students } = await supabase
     .from("students")
     .select("id, name, email, active")
-    .order("name")) as { data: Student[] | null };
+    .order("name");
 
   // Cálculos rápidos
   const totalStudents = students?.length ?? 0;
@@ -81,19 +64,18 @@ export default async function DashboardPage() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-    // Forçando o tipo retornado pela consulta do Supabase
-    const { data, error } = (await supabase
+    const { data, error } = await supabase
       .from("lesson_packages")
       .select("price")
       .gte("paid_at", startOfMonth)
-      .lt("paid_at", startOfNextMonth)) as { data: PackagePrice[] | null; error: any };
+      .lt("paid_at", startOfNextMonth);
 
     if (error || !data) {
       if (error) console.error("Erro ao buscar total a receber:", error.message);
       return 0;
     }
 
-    // O TypeScript agora reconhece 'packageItem.price' perfeitamente
+    // O TypeScript infere 'packageItem.price' automaticamente do seu schema
     const total = data.reduce((acc, packageItem) => acc + (packageItem.price ?? 0), 0);
 
     return total;
@@ -199,7 +181,7 @@ export default async function DashboardPage() {
             </ul>
           </div>
         ) : (
-          /* ESTADO VAZIO: Quando a tabela do Supabase retorna 0 registros */
+          /* ESTADO VAZIO */
           <div className="rounded-xl border border-border/50 bg-card p-12 text-center shadow-sm">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted/60">
               <Users className="h-6 w-6 text-primary/60" />
