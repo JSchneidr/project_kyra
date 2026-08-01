@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { Tables, TablesUpdate } from "@/types/database.types";
 
 const rescheduleSchema = z.object({
   new_start_at: z.string().datetime(),
@@ -33,12 +34,12 @@ export async function POST(
     );
   }
 
-  const { data: lesson, error: lessonError } = await supabase
+  const { data: lesson, error: lessonError } =( await supabase
     .from("lessons")
     .select("id, start_at, status")
     .eq("id", id)
     .eq("professor_id", user.id)
-    .single();
+    .single()) as { data: Tables<"lessons"> | null; error: any };
 
   if (lessonError || !lesson) {
     return NextResponse.json({ error: "Aula não encontrada" }, { status: 404 });
@@ -53,16 +54,18 @@ export async function POST(
 
   // Regra de negócio 3: remarcação não consome crédito — só atualiza a
   // data e guarda o histórico. O status continua SCHEDULED.
-  const { data: updated, error: updateError } = await supabase
+  const updateData: TablesUpdate<"lessons"> = {
+    start_at: parsed.data.new_start_at,
+    end_at: parsed.data.new_end_at,
+  };
+
+  const { data: updated, error: updateError } = (await supabase
     .from("lessons")
-    .update({
-      start_at: parsed.data.new_start_at,
-      end_at: parsed.data.new_end_at,
-    })
+    .update(updateData)
     .eq("id", id)
     .eq("professor_id", user.id)
     .select()
-    .single();
+    .single()) as { data: Tables<"lessons"> | null; error: any };
 
   if (updateError) {
     if (updateError.code === "23P01") {
