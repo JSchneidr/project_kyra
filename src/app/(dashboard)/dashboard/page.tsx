@@ -3,6 +3,23 @@ import { createClient } from "@/lib/supabase/server";
 import { Users, Calendar, CircleDollarSign, GraduationCap, Plus } from "lucide-react";
 import Link from "next/link";
 
+// Definição de tipos explícitos para evitar erros de compilação 'never'
+type Student = {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+};
+
+type PackagePrice = {
+  price: number;
+};
+
+type UserProfile = {
+  name: string | null;
+  timezone: string | null;
+};
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -14,20 +31,22 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  // Garantindo o tipo da consulta de perfil
+  const { data: profile } = (await supabase
     .from("users")
     .select("name, timezone")
     .eq("id", user.id)
-    .single();
+    .single()) as { data: UserProfile | null };
 
-  const { data: students } = await supabase
+  // Garantindo o tipo da lista de estudantes
+  const { data: students } = (await supabase
     .from("students")
     .select("id, name, email, active")
-    .order("name");
+    .order("name")) as { data: Student[] | null };
 
-  // Cálculos rápidos baseados nos dados reais vindos do Supabase
+  // Cálculos rápidos
   const totalStudents = students?.length ?? 0;
-  const activeStudents = students?.filter((s: { active: boolean }) => s.active).length ?? 0;
+  const activeStudents = students?.filter((s) => s.active).length ?? 0;
 
   async function getActivePackagesCount() {
     const { count } = await supabase
@@ -39,22 +58,18 @@ export default async function DashboardPage() {
 
   async function getScheduledLessonsCurrentMonthCount() {
     const now = new Date();
-  
-    // Primeiro dia do mês atual (ex: 2026-07-01T00:00:00.000Z)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    
-    // Primeiro dia do próximo mês (ex: 2026-08-01T00:00:00.000Z)
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
     const { count, error } = await supabase
-      .from('lessons')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'SCHEDULED')
-      .gte('start_at', startOfMonth)
-      .lt('start_at', startOfNextMonth);
+      .from("lessons")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "SCHEDULED")
+      .gte("start_at", startOfMonth)
+      .lt("start_at", startOfNextMonth);
 
     if (error) {
-      console.error('Erro ao buscar aulas agendadas do mês:', error);
+      console.error("Erro ao buscar aulas agendadas do mês:", error);
       return 0;
     }
 
@@ -63,24 +78,23 @@ export default async function DashboardPage() {
 
   async function getTotalRevenueCurrentMonth() {
     const now = new Date();
-  
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-    // Selecionamos apenas o campo 'price'
-    const { data, error } = await supabase
-      .from('lesson_packages')
-      .select('price')
-      .gte('paid_at', startOfMonth)
-      .lt('paid_at', startOfNextMonth);
+    // Forçando o tipo retornado pela consulta do Supabase
+    const { data, error } = (await supabase
+      .from("lesson_packages")
+      .select("price")
+      .gte("paid_at", startOfMonth)
+      .lt("paid_at", startOfNextMonth)) as { data: PackagePrice[] | null; error: any };
 
-    if (error) {
-      console.error('Erro ao buscar total a receber:', error.message);
+    if (error || !data) {
+      if (error) console.error("Erro ao buscar total a receber:", error.message);
       return 0;
     }
 
-    // Somamos o array de preços usando reduce
-    const total = data.reduce((acc, packageItem) => acc + packageItem.price, 0);
+    // O TypeScript agora reconhece 'packageItem.price' perfeitamente
+    const total = data.reduce((acc, packageItem) => acc + (packageItem.price ?? 0), 0);
 
     return total;
   }
@@ -112,7 +126,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 2: Aulas este Mês (Estático por enquanto) */}
+        {/* Card 2: Aulas este Mês */}
         <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-muted-foreground">Aulas Agendadas</h3>
@@ -124,7 +138,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 3: Pacotes Ativos (Estático por enquanto) */}
+        {/* Card 3: Pacotes Ativos */}
         <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-muted-foreground">Pacotes Ativos</h3>
@@ -136,7 +150,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Previsão de Ganhos (Estático por enquanto) */}
+        {/* Card 4: Previsão de Ganhos */}
         <div className="rounded-xl border border-border/50 bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between space-y-0 pb-2">
             <h3 className="text-sm font-medium text-muted-foreground">A Receber</h3>
