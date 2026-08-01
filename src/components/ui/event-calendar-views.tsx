@@ -71,18 +71,21 @@ const dayRowCommonClasses: CalendarOptions = {
 
 export type EventCalendarViewProps =
   CalendarOptions &
-  Required<Pick<CalendarOptions, 'popoverCloseContent'>> // ensure callers define icons
+  Required<Pick<CalendarOptions, 'popoverCloseContent'>> & {
+    calendarRef?: React.Ref<React.ComponentRef<typeof FullCalendar>>
+  }// ensure callers define icons
 
 export function EventCalendarViews({
   views: userViews,
+  calendarRef,
   ...restOptions
 }: EventCalendarViewProps) {
   return (
     <FullCalendar
+      ref={calendarRef}
 
       /* Abstract Event
       ----------------------------------------------------------------------------------------- */
-
       eventShortHeight={50}
       eventColor='var(--primary)'
       eventContrastColor='var(--primary-foreground)'

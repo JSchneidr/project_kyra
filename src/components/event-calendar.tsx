@@ -1,4 +1,6 @@
-import { type CalendarOptions, useCalendarController } from '@fullcalendar/react'
+import { useEffect, type RefObject } from 'react'
+
+import FullCalendar, { type CalendarOptions, type CalendarController, useCalendarController } from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/react/daygrid'
 import interactionPlugin from '@fullcalendar/react/interaction'
 import listPlugin from '@fullcalendar/react/list'
@@ -35,6 +37,8 @@ export interface EventCalendarProps extends Omit<CalendarOptions, 'class' | 'cla
     hint?: string
     click?: (ev: MouseEvent) => void
   }
+  controllerRef?: RefObject<CalendarController | null>
+  calendarRef?: RefObject<React.ComponentRef<typeof FullCalendar> | null>
 }
 
 export function EventCalendar({
@@ -45,9 +49,17 @@ export function EventCalendar({
   contentHeight,
   direction,
   plugins: userPlugins = [],
+  controllerRef,
+  calendarRef,
   ...restOptions
 }: EventCalendarProps) {
   const controller = useCalendarController()
+
+  useEffect(() => {
+    if (controllerRef) {
+      controllerRef.current = controller
+    }
+  }, [controller, controllerRef])
 
   const hasBorderX = !(restOptions.borderlessX ?? restOptions.borderless)
   const hasBorderTop = !(restOptions.borderlessTop ?? restOptions.borderless)
@@ -78,6 +90,7 @@ export function EventCalendar({
       <div className='grow min-h-0'>
         <EventCalendarViews
           controller={controller}
+          calendarRef={calendarRef}
           height={isHeightAuto ? 'auto' : height !== undefined ? '100%' : contentHeight}
           initialView={availableViews[0]}
           navLinkDayClick={navLinkDayClick}

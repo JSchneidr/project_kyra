@@ -1,27 +1,22 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/react/daygrid";
-import timeGridPlugin from "@fullcalendar/react/timegrid";
-import listPlugin from "@fullcalendar/react/list";
 import interactionPlugin from "@fullcalendar/react/interaction";
+import FullCalendar from '@fullcalendar/react'
 import type {
+  CalendarController,
   DatesSetInfo,
   DateClickInfo,
   EventClickInfo,
   EventDropInfo,
   EventInput,
-  CalendarRef,
 } from "@fullcalendar/react";
-import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
+import { EventCalendar } from "@/components/event-calendar";
 import { NewLessonDialog } from "@/components/calendar/new-lesson-dialog";
 import {
   LessonDetailsDialog,
   type LessonDetails,
 } from "@/components/calendar/lesson-details-dialog";
-import '@fullcalendar/react/skeleton.css'
-import "@/styles/calendar.css";
 
 type Student = { id: string; name: string };
 
@@ -38,19 +33,16 @@ type LessonRow = {
 function eventClassNames(status: LessonRow["status"]) {
   switch (status) {
     case "COMPLETED":
-      return ["!bg-accent/20", "!border-accent", "!text-primary"];
+      return "!bg-accent/20 !border-accent !text-primary";
     case "CANCELLED":
-      return ["!bg-muted", "!border-border", "!text-muted-foreground", "line-through", "opacity-60"];
+      return "!bg-muted !border-border !text-muted-foreground line-through opacity-60";
     default:
-      return ["!bg-secondary/20", "!border-secondary", "!text-primary"];
+      return "!bg-secondary/20 !border-secondary !text-primary";
   }
 }
 
 export function LessonCalendar({ students }: { students: Student[] }) {
-  const calendarRef = useRef<CalendarRef | null>(null);
-
-  const [title, setTitle] = useState("");
-  const [currentView, setCurrentView] = useState("dayGridMonth");
+  const controllerRef = useRef<CalendarController | null>(null);
 
   const [newLessonOpen, setNewLessonOpen] = useState(false);
   const [newLessonRange, setNewLessonRange] = useState<{
@@ -60,22 +52,14 @@ export function LessonCalendar({ students }: { students: Student[] }) {
 
   const [selectedLesson, setSelectedLesson] = useState<LessonDetails | null>(null);
 
+  const calendarRef = useRef<React.ComponentRef<typeof FullCalendar> | null>(null);
+
   const refetch = useCallback(() => {
     calendarRef.current?.getApi().refetchEvents();
   }, []);
 
-  function handleDatesSet(arg: DatesSetInfo) {
-    setTitle(arg.view.title);
-    setCurrentView(arg.view.type);
-  }
-
   function handleDateClick(arg: DateClickInfo) {
     setNewLessonRange({ start: arg.date, end: null });
-    setNewLessonOpen(true);
-  }
-
-  function handleAddEventClick() {
-    setNewLessonRange({ start: new Date(), end: null });
     setNewLessonOpen(true);
   }
 
@@ -121,35 +105,31 @@ export function LessonCalendar({ students }: { students: Student[] }) {
 
   return (
     <>
-      <CalendarToolbar
-        title={title}
-        currentView={currentView}
-        onToday={() => calendarRef.current?.getApi().today()}
-        onPrev={() => calendarRef.current?.getApi().prev()}
-        onNext={() => calendarRef.current?.getApi().next()}
-        onChangeView={(view) => calendarRef.current?.getApi().changeView(view)}
-        onAddEvent={handleAddEventClick}
-      />
-
-      <FullCalendar
-        ref={calendarRef}
-        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        headerToolbar={false}
+      <EventCalendar
+        borderless
+        controllerRef={controllerRef}
+        calendarRef={calendarRef}
+        plugins={[interactionPlugin]}
+        availableViews={["dayGridMonth", "timeGridWeek", "timeGridDay", "listWeek"]}
+        addButton={{
+          text: "Add Event",
+          click: () => {
+            setNewLessonRange({ start: new Date(), end: null });
+            setNewLessonOpen(true);
+          },
+        }}
         locale="pt-br"
         firstDay={1}
-        weekNumbers
         dayMaxEvents
         editable
         selectable
         allDaySlot={false}
-        height="auto"
-        datesSet={handleDatesSet}
+        height="100%"
         dateClick={handleDateClick}
         eventClick={handleEventClick}
         eventDrop={handleEventDrop}
-        eventClass={(arg) =>
-          eventClassNames(arg.event.extendedProps.status as LessonRow["status"]).join(" ")
+        eventClass={(info) =>
+          eventClassNames(info.event.extendedProps.status as LessonRow["status"])
         }
         events={async (info, successCallback, failureCallback) => {
           try {

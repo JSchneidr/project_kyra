@@ -33,7 +33,7 @@ export default async function CalendarPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">
+      <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm flex flex-col h-[calc(100vh-14rem)]">
         <LessonCalendar students={students ?? []} />
       </div>
     </div>
