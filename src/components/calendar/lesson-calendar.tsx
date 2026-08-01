@@ -2,22 +2,25 @@
 
 import { useCallback, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import listPlugin from "@fullcalendar/list";
-import interactionPlugin, { DateClickArg } from "@fullcalendar/interaction";
+import dayGridPlugin from "@fullcalendar/react/daygrid";
+import timeGridPlugin from "@fullcalendar/react/timegrid";
+import listPlugin from "@fullcalendar/react/list";
+import interactionPlugin from "@fullcalendar/react/interaction";
 import type {
-  DatesSetArg,
-  EventClickArg,
-  EventDropArg,
+  DatesSetInfo,
+  DateClickInfo,
+  EventClickInfo,
+  EventDropInfo,
   EventInput,
-} from "@fullcalendar/core";
+  CalendarRef,
+} from "@fullcalendar/react";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { NewLessonDialog } from "@/components/calendar/new-lesson-dialog";
 import {
   LessonDetailsDialog,
   type LessonDetails,
 } from "@/components/calendar/lesson-details-dialog";
+import '@fullcalendar/react/skeleton.css'
 import "@/styles/calendar.css";
 
 type Student = { id: string; name: string };
@@ -44,7 +47,7 @@ function eventClassNames(status: LessonRow["status"]) {
 }
 
 export function LessonCalendar({ students }: { students: Student[] }) {
-  const calendarRef = useRef<FullCalendar | null>(null);
+  const calendarRef = useRef<CalendarRef | null>(null);
 
   const [title, setTitle] = useState("");
   const [currentView, setCurrentView] = useState("dayGridMonth");
@@ -61,12 +64,12 @@ export function LessonCalendar({ students }: { students: Student[] }) {
     calendarRef.current?.getApi().refetchEvents();
   }, []);
 
-  function handleDatesSet(arg: DatesSetArg) {
+  function handleDatesSet(arg: DatesSetInfo) {
     setTitle(arg.view.title);
     setCurrentView(arg.view.type);
   }
 
-  function handleDateClick(arg: DateClickArg) {
+  function handleDateClick(arg: DateClickInfo) {
     setNewLessonRange({ start: arg.date, end: null });
     setNewLessonOpen(true);
   }
@@ -76,7 +79,7 @@ export function LessonCalendar({ students }: { students: Student[] }) {
     setNewLessonOpen(true);
   }
 
-  function handleEventClick(arg: EventClickArg) {
+  function handleEventClick(arg: EventClickInfo) {
     const props = arg.event.extendedProps as {
       notes: string | null;
       status: LessonRow["status"];
@@ -89,12 +92,13 @@ export function LessonCalendar({ students }: { students: Student[] }) {
       title: props.originalTitle,
       notes: props.notes,
       status: props.status,
+      studentName: props.studentName,
       startAt: arg.event.startStr,
       endAt: arg.event.endStr,
     });
   }
 
-  async function handleEventDrop(arg: EventDropArg) {
+  async function handleEventDrop(arg: EventDropInfo) {
     const res = await fetch(`/api/lessons/${arg.event.id}/reschedule`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,8 +148,8 @@ export function LessonCalendar({ students }: { students: Student[] }) {
         dateClick={handleDateClick}
         eventClick={handleEventClick}
         eventDrop={handleEventDrop}
-        eventClassNames={(arg) =>
-          eventClassNames(arg.event.extendedProps.status as LessonRow["status"])
+        eventClass={(arg) =>
+          eventClassNames(arg.event.extendedProps.status as LessonRow["status"]).join(" ")
         }
         events={async (info, successCallback, failureCallback) => {
           try {

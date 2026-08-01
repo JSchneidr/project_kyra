@@ -63,7 +63,7 @@ export default async function StudentsPage() {
 
         {students && students.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-            {students.map((student: Tables<"students">) => (
+            {students.map((student) => (
               <StudentCard key={student.id} student={student} />
             ))}
           </div>

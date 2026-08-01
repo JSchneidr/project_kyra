@@ -77,7 +77,7 @@ export default async function DashboardPage() {
     }
 
     // O TypeScript infere 'packageItem.price' automaticamente do seu schema
-    const total = data.reduce((acc, packageItem: Tables<"lesson_packages">) => acc + (packageItem.price ?? 0), 0);
+    const total = data.reduce((acc, packageItem) => acc + (packageItem.price ?? 0), 0);
 
     return total;
   }
