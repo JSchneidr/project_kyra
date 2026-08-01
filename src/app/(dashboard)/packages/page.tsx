@@ -10,6 +10,27 @@ import {
   CardContent,
 } from "@/components/ui/card";
 
+// Tipos explícitos para garantir que o TypeScript não infira 'never'
+type StudentOption = {
+  id: string;
+  name: string;
+};
+
+type PackageItem = {
+  id: string;
+  student_id: string;
+  package_size: number;
+  price: number;
+  paid_at: string | null;
+  status: string;
+  students: {
+    name: string;
+  } | null;
+};
+
+type CompletedLesson = {
+  package_id: string | null;
+};
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -27,23 +48,25 @@ export default async function PackagesPage() {
     redirect("/login");
   }
 
-  const { data: students } = await supabase
+  // 1. Consulta de Alunos com Tipagem Forçada
+  const { data: students } = (await supabase
     .from("students")
     .select("id, name")
     .eq("active", true)
-    .order("name");
+    .order("name")) as { data: StudentOption[] | null };
 
-  const { data: packages } = await supabase
+  // 2. Consulta de Pacotes com Tipagem Forçada
+  const { data: packages } = (await supabase
     .from("lesson_packages")
     .select("*, students(name)")
-    .order("paid_at", { ascending: false });
+    .order("paid_at", { ascending: false })) as { data: PackageItem[] | null };
 
-  // RF07: progresso = aulas COMPLETED vinculadas a cada pacote.
-  const { data: completedLessons } = await supabase
+  // 3. Consulta de Aulas Concluídas com Tipagem Forçada (Resolve o erro do package_id)
+  const { data: completedLessons } = (await supabase
     .from("lessons")
     .select("package_id")
     .eq("status", "COMPLETED")
-    .eq("professor_id", user.id);
+    .eq("professor_id", user.id)) as { data: CompletedLesson[] | null };
 
   const completedByPackage = new Map<string, number>();
   for (const lesson of completedLessons ?? []) {
@@ -66,7 +89,7 @@ export default async function PackagesPage() {
         </p>
       </div>
 
-      {/* 2. FORMULÁRIO DE NOVO PACOTE (Estilizado para combinar com o layout do painel) */}
+      {/* 2. FORMULÁRIO DE NOVO PACOTE */}
       <Card className="border border-border/50 bg-card shadow-sm rounded-xl overflow-hidden">
         <CardHeader className="space-y-1">
           <CardTitle className="text-xl font-bold text-primary flex items-center gap-2">
@@ -86,7 +109,6 @@ export default async function PackagesPage() {
         <h2 className="text-xl font-bold text-primary tracking-tight">Histórico de Contratos</h2>
 
         {packages && packages.length > 0 ? (
-          /* Grid responsivo transformando as li sem graça em cards ricos */
           <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
             {packages.map((pkg) => {
               const done = completedByPackage.get(pkg.id) ?? 0;
@@ -94,8 +116,8 @@ export default async function PackagesPage() {
               const percentage = Math.min((done / size) * 100, 100);
               const isActive = pkg.status === "ACTIVE";
 
-              // Aluno tipado dinamicamente com segurança
-              const studentName = (pkg.students as unknown as { name: string } | null)?.name ?? "Aluno removido";
+              // Acesso seguro e tipado ao nome do aluno
+              const studentName = pkg.students?.name ?? "Aluno removido";
 
               return (
                 <div 
@@ -112,17 +134,17 @@ export default async function PackagesPage() {
                         <Calendar className="h-3 w-3" />
                         Pago em: {pkg.paid_at ? new Date(pkg.paid_at).toLocaleDateString('pt-BR') : 'Pendente'}
                       </p>
-                       <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <DollarSign className="h-3 w-3" />
                         {usdFormatter.format(Number(pkg.price ?? 0))}
                       </p>
                     </div>
 
-                    {/* Badge de Status Dinâmico */}
+                    {/* Badge de Status */}
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         isActive
-                          ? "bg-secondary/10 text-primary" // Verde-Menta suave de ativo
+                          ? "bg-secondary/10 text-primary"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
@@ -135,19 +157,19 @@ export default async function PackagesPage() {
                     </span>
                   </div>
 
-                  {/* Progresso Físico Visual de Consumo de Aulas */}
+                  {/* Progresso de Consumo de Aulas */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-muted-foreground">Progresso do Pacote</span>
                       <span className="font-bold text-primary">{done} / {size} aulas</span>
                     </div>
-                    {/* Barra de Progresso Customizada (Injetando a cor da marca) */}
+                    
                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div 
                         className={`h-full transition-all duration-500 rounded-full ${
                           percentage >= 100 
-                            ? "bg-accent" // Vira Terracota se o pacote esgotar (alerta para renovar!)
-                            : "bg-secondary" // Mantém Verde-Menta durante o andamento normal
+                            ? "bg-accent" 
+                            : "bg-secondary"
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
