@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
-export function NewStudentForm() {
+export function NewStudentForm({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,18 +34,18 @@ export function NewStudentForm() {
 
     if (!res.ok) {
       const body = await res.json();
-      setError(
-        typeof body.error === "string"
-          ? body.error
-          : "Não foi possível criar o aluno."
-      );
+      const message = typeof body.error === "string" ? body.error : "Não foi possível criar o aluno.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     setName("");
     setEmail("");
     setWhatsapp("");
+    toast.success("Aluno criado com sucesso!");
     router.refresh();
+    onSuccess?.();
   }
 
   return (

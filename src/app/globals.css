@@ -82,6 +82,15 @@
     
     --sidebar-border: 177 100% 15%;            /* Linha divisória interna da barra */
     --sidebar-ring: 165 100% 40%;
+
+    /* VARIÁVEIS DO TOAST (Sonner) - PALETA KYRA */
+    --toast-success-bg: 165 100% 40%;      /* Verde Menta */
+    --toast-success-text: 177 100% 19%;    /* Verde Escuro */
+    --toast-success-border: 165 100% 40%;
+
+    --toast-error-bg: 8 68% 47%;           /* Terracota */
+    --toast-error-text: 38 100% 98%;       /* Off-white */
+    --toast-error-border: 8 68% 47%;
   }
   .dark {
     --sidebar-background: 240 5.9% 10%;
@@ -92,5 +101,23 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  
+  [data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+    --normal-bg: hsl(var(--secondary) / 0.12);
+    --normal-text: hsl(var(--primary));
+    --normal-border: hsl(var(--secondary) / 0.4);
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+    --normal-bg: hsl(var(--accent) / 0.12);
+    --normal-text: hsl(var(--accent));
+    --normal-border: hsl(var(--accent) / 0.4);
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-type="warning"] {
+    --normal-bg: hsl(var(--accent) / 0.12);
+    --normal-text: hsl(var(--accent));
+    --normal-border: hsl(var(--accent) / 0.4);
   }
 }
