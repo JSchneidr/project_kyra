@@ -68,6 +68,14 @@ export default async function PublicSharePage({
     .eq("lessons.student_id", student.id)
     .order("changed_at", { ascending: false });
 
+  // 6. Busca de Aulas Concluidas (para histórico)
+  const { data: completedLessons } = await supabase
+    .from("lessons")
+    .select("id, title, notes, start_at, end_at, status")
+    .eq("student_id", student.id)
+    .eq("status", "COMPLETED")
+    .order("start_at", { ascending: false });
+
   // Cálculos de segurança para a barra de progresso
   const totalPackageLessons = activePackage?.package_size || 1;
   const totalCompleted = completedCount ?? 0;
@@ -172,6 +180,36 @@ export default async function PublicSharePage({
         ) : (
           <p className="text-sm text-muted-foreground">
             No scheduled lessons at the moment.
+          </p>
+        )}
+      </section>
+      {/* Completed lessons */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold text-primary tracking-tight flex items-center gap-2">
+          <GraduationCap className="h-5 w-5 text-secondary" />
+          Completed Lessons
+        </h2>
+        
+        {completedLessons && completedLessons.length > 0 ? (
+          <ul className="space-y-2">
+            {completedLessons.map((lesson) => (
+              <li
+                key={lesson.id}
+                className="rounded-xl border border-border/50 bg-card p-4 shadow-sm"
+              >
+                <p className="font-semibold text-primary">
+                  {lesson.title || lesson.notes || "Lesson"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <LocalDateTime iso={lesson.start_at} withWeekday /> —{" "}
+                  <LocalDateTime iso={lesson.end_at} />
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No completed lessons at the moment.
           </p>
         )}
       </section>
