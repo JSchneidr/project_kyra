@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +22,16 @@ type Student = {
   whatsapp: string | null;
 };
 
-export function EditStudentDialog({ student }: { student: Student }) {
+export function EditStudentDialog({
+  student,
+  open,
+  onOpenChange,
+}: {
+  student: Student;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(student.name);
   const [email, setEmail] = useState(student.email);
@@ -53,27 +58,11 @@ export function EditStudentDialog({ student }: { student: Student }) {
 
     toast.success("Aluno atualizado.");
     router.refresh();
-    setOpen(false);
+    onOpenChange(false);
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) {
-          setName(student.name);
-          setEmail(student.email);
-          setWhatsapp(student.whatsapp ?? "");
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Pencil className="h-3.5 w-3.5" />
-          Editar
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar aluno</DialogTitle>
@@ -96,7 +85,7 @@ export function EditStudentDialog({ student }: { student: Student }) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
         </DialogFooter>
       </DialogContent>

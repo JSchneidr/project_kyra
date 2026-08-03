@@ -25,6 +25,10 @@ const config: Config = {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			'screen-bg': 'hsl(var(--screen-background))',
+			 popover: {
+			DEFAULT: "hsl(var(--popover))",
+			foreground: "hsl(var(--popover-foreground))",
+			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'

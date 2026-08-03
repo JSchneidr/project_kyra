@@ -3,9 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Mail, Phone, Power, Link2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, Phone, Link2, MoreHorizontal, Pencil } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { EditStudentDialog } from "@/components/students/edit-student-dialog";
 
 type Student = {
@@ -20,6 +27,7 @@ type Student = {
 export function StudentsTable({ students }: { students: Student[] }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   async function handleToggleActive(student: Student) {
     setLoadingId(student.id);
@@ -57,7 +65,7 @@ export function StudentsTable({ students }: { students: Student[] }) {
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Contato</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Ativo</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -74,31 +82,49 @@ export function StudentsTable({ students }: { students: Student[] }) {
                 </div>
               </TableCell>
               <TableCell>
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    student.active ? "bg-secondary/10 text-primary" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {student.active ? <CheckCircle2 className="h-3 w-3 text-secondary" /> : <AlertCircle className="h-3 w-3" />}
-                  {student.active ? "Ativo" : "Inativo"}
-                </span>
+                <Switch
+                  size="sm"
+                  checked={student.active}
+                  disabled={loadingId === student.id}
+                  onCheckedChange={() => handleToggleActive(student)}
+                  aria-label={student.active ? "Desativar aluno" : "Reativar aluno"}
+                />
               </TableCell>
               <TableCell>
-                <div className="flex justify-end gap-2">
-                  <EditStudentDialog student={student} />
-                  <Button size="sm" variant="outline" onClick={() => handleToggleActive(student)} disabled={loadingId === student.id}>
-                    <Power className="h-3.5 w-3.5" />
-                    {student.active ? "Desativar" : "Reativar"}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleCopyLink(student)}>
-                    <Link2 className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="flex justify-end">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditingStudent(student)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleCopyLink(student)}>
+                        <Link2 className="h-3.5 w-3.5" />
+                        Copiar link público
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {editingStudent && (
+        <EditStudentDialog
+          student={editingStudent}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingStudent(null);
+          }}
+        />
+      )}
     </div>
   );
 }
