@@ -31,6 +31,7 @@ const navLinkWeekClick = 'timeGridWeek'
 export interface EventCalendarProps extends Omit<CalendarOptions, 'class' | 'className' | 'headerToolbar' | 'footerToolbar'> {
   className?: string
   availableViews?: string[]
+  size?: 'sm' | 'md' | 'lg',
   addButton?: {
     isPrimary?: boolean
     text?: string
@@ -45,6 +46,7 @@ export function EventCalendar({
   availableViews = defaultAvailableViews,
   addButton,
   className,
+  size = 'md',
   height,
   contentHeight,
   direction,
@@ -86,6 +88,7 @@ export function EventCalendar({
         controller={controller}
         availableViews={availableViews}
         addButton={addButton}
+        size={size}
       />
       <div className='grow min-h-0'>
         <EventCalendarViews

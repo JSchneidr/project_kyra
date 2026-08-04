@@ -2,10 +2,9 @@
 
 import { useCallback, useRef, useState } from "react";
 import interactionPlugin from "@fullcalendar/react/interaction";
-import FullCalendar from '@fullcalendar/react'
+import FullCalendar from "@fullcalendar/react";
 import type {
   CalendarController,
-  DatesSetInfo,
   DateClickInfo,
   EventClickInfo,
   EventDropInfo,
@@ -30,18 +29,26 @@ type LessonRow = {
   students: { name: string } | null;
 };
 
-function eventClassNames(status: LessonRow["status"]) {
+interface LessonCalendarProps {
+  students: Student[];
+  readOnly?: boolean;
+  size?: "sm" | "md" | "lg";
+}
+
+function eventClassNames(status: LessonRow["status"], readOnly?: boolean) {
+  const basePointer = readOnly ? "cursor-default select-none" : "";
+  
   switch (status) {
     case "COMPLETED":
-      return "!bg-accent/20 !border-accent !text-primary";
+      return `!bg-accent/20 !border-accent !text-primary ${basePointer}`;
     case "CANCELLED":
-      return "!bg-muted !border-border !text-muted-foreground line-through opacity-60";
+      return `!bg-muted !border-border !text-muted-foreground line-through opacity-60 ${basePointer}`;
     default:
-      return "!bg-secondary/20 !border-secondary !text-primary";
+      return `!bg-secondary/20 !border-secondary !text-primary ${basePointer}`;
   }
 }
 
-export function LessonCalendar({ students }: { students: Student[] }) {
+export function LessonCalendar({ students, readOnly = false, size='md' }: LessonCalendarProps) {
   const controllerRef = useRef<CalendarController | null>(null);
 
   const [newLessonOpen, setNewLessonOpen] = useState(false);
@@ -58,12 +65,15 @@ export function LessonCalendar({ students }: { students: Student[] }) {
     calendarRef.current?.getApi().refetchEvents();
   }, []);
 
+  // Funções tratam a trava do readOnly sem quebrar os adereços do FullCalendar
   function handleDateClick(arg: DateClickInfo) {
+    if (readOnly) return;
     setNewLessonRange({ start: arg.date, end: null });
     setNewLessonOpen(true);
   }
 
   function handleEventClick(arg: EventClickInfo) {
+    if (readOnly) return;
     const props = arg.event.extendedProps as {
       notes: string | null;
       status: LessonRow["status"];
@@ -83,6 +93,11 @@ export function LessonCalendar({ students }: { students: Student[] }) {
   }
 
   async function handleEventDrop(arg: EventDropInfo) {
+    if (readOnly) {
+      arg.revert();
+      return;
+    }
+
     const res = await fetch(`/api/lessons/${arg.event.id}/reschedule`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -105,88 +120,103 @@ export function LessonCalendar({ students }: { students: Student[] }) {
 
   return (
     <>
-      <EventCalendar
-        borderless
-        controllerRef={controllerRef}
-        calendarRef={calendarRef}
-        plugins={[interactionPlugin]}
-        availableViews={["dayGridMonth", "timeGridWeek", "timeGridDay", "listWeek"]}
-        addButton={{
-          text: "Add Event",
-          click: () => {
-            setNewLessonRange({ start: new Date(), end: null });
-            setNewLessonOpen(true);
-          },
-        }}
-        locale="pt-br"
-        firstDay={1}
-        dayMaxEvents
-        editable
-        selectable
-        allDaySlot={false}
-        height="100%"
-        dateClick={handleDateClick}
-        eventClick={handleEventClick}
-        eventDrop={handleEventDrop}
-        eventClass={(info) =>
-          eventClassNames(info.event.extendedProps.status as LessonRow["status"])
-        }
-        events={async (info, successCallback, failureCallback) => {
-          try {
-            const params = new URLSearchParams({
-              start: info.startStr,
-              end: info.endStr,
-            });
-            const res = await fetch(`/api/lessons?${params.toString()}`);
-            const body = await res.json();
-
-            if (!res.ok) {
-              failureCallback(new Error(body.error ?? "Erro ao carregar aulas"));
-              return;
-            }
-
-            const events: EventInput[] = (body.lessons as LessonRow[]).map(
-              (lesson) => ({
-                id: lesson.id,
-                title:
-                  lesson.title ||
-                  lesson.notes?.slice(0, 30) ||
-                  lesson.students?.name ||
-                  "Aula",
-                start: lesson.start_at,
-                end: lesson.end_at,
-                extendedProps: {
-                  notes: lesson.notes,
-                  status: lesson.status,
-                  studentName: lesson.students?.name ?? "Aluno removido",
-                  originalTitle: lesson.title,
-                },
-              })
-            );
-
-            successCallback(events);
-          } catch (err) {
-            failureCallback(err as Error);
+      {/* Container com altura mínima garantida (h-full min-h-[600px]) para não sumir no flexbox/grid */}
+      <div className={`w-full h-full ${readOnly ? "[&_.fc-event]:pointer-events-none [&_.fc-daygrid-day]:pointer-events-none" : ""}`}>
+        <EventCalendar
+          size={size}
+          borderless
+          controllerRef={controllerRef}
+          calendarRef={calendarRef}
+          plugins={[interactionPlugin]}
+          availableViews={["dayGridMonth", "timeGridWeek", "timeGridDay", "listWeek"]}
+          addButton={
+            readOnly
+              ? undefined
+              : {
+                  text: "Add Event",
+                  click: () => {
+                    setNewLessonRange({ start: new Date(), end: null });
+                    setNewLessonOpen(true);
+                  },
+                }
           }
-        }}
-      />
+          locale="pt-br"
+          firstDay={1}
+          dayMaxEvents
+          editable={!readOnly}
+          selectable={!readOnly}
+          allDaySlot={false}
+          height="100%"
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventClass={(info) =>
+            eventClassNames(
+              info.event.extendedProps.status as LessonRow["status"],
+              readOnly
+            )
+          }
+          events={async (info, successCallback, failureCallback) => {
+            try {
+              const params = new URLSearchParams({
+                start: info.startStr,
+                end: info.endStr,
+              });
+              const res = await fetch(`/api/lessons?${params.toString()}`);
+              const body = await res.json();
 
-      <NewLessonDialog
-        open={newLessonOpen}
-        onOpenChange={setNewLessonOpen}
-        students={students}
-        initialStart={newLessonRange.start}
-        initialEnd={newLessonRange.end}
-        onCreated={refetch}
-      />
+              if (!res.ok) {
+                failureCallback(new Error(body.error ?? "Erro ao carregar aulas"));
+                return;
+              }
 
-      <LessonDetailsDialog
-        lesson={selectedLesson}
-        onOpenChange={(open) => {
-          if (!open) setSelectedLesson(null);
-        }}
-        onUpdated={refetch}
-      />
+              const events: EventInput[] = (body.lessons as LessonRow[]).map(
+                (lesson) => ({
+                  id: lesson.id,
+                  title:
+                    lesson.title ||
+                    lesson.notes?.slice(0, 30) ||
+                    lesson.students?.name ||
+                    "Aula",
+                  start: lesson.start_at,
+                  end: lesson.end_at,
+                  extendedProps: {
+                    notes: lesson.notes,
+                    status: lesson.status,
+                    studentName: lesson.students?.name ?? "Aluno removido",
+                    originalTitle: lesson.title,
+                  },
+                })
+              );
+
+              successCallback(events);
+            } catch (err) {
+              failureCallback(err as Error);
+            }
+          }}
+        />
+      </div>
+
+      {!readOnly && (
+        <>
+          <NewLessonDialog
+            open={newLessonOpen}
+            onOpenChange={setNewLessonOpen}
+            students={students}
+            initialStart={newLessonRange.start}
+            initialEnd={newLessonRange.end}
+            onCreated={refetch}
+          />
+
+          <LessonDetailsDialog
+            lesson={selectedLesson}
+            onOpenChange={(open) => {
+              if (!open) setSelectedLesson(null);
+            }}
+            onUpdated={refetch}
+          />
+        </>
+      )}
     </>
   );
 }
